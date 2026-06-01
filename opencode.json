@@ -1,0 +1,68 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "edit": "ask",
+    "bash": { "git *": "allow", "*": "ask" }
+  },
+  "instructions": ["AGENTS.md"],
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+  "agent": {
+    "game-dev": {
+      "description": "Game development architect — designs project structure, selects patterns, plans systems, and reviews architecture for game projects.",
+      "mode": "subagent",
+      "permission": {
+        "bash": { "git *": "allow", "dotnet *": "allow", "npm *": "allow", "pip *": "allow", "*": "ask" },
+        "edit": "allow",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    },
+    "unity-dev": {
+      "description": "Unity C# developer — writes and reviews Unity-specific code including MonoBehaviours, ScriptableObjects, Editor tools, and performance optimization.",
+      "mode": "subagent",
+      "permission": {
+        "bash": { "git *": "allow", "dotnet *": "allow", "npm *": "allow", "*": "ask" },
+        "edit": "allow",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    },
+    "game-code": {
+      "description": "Game logic programmer — implements gameplay systems, combat, AI, state machines, save/load, and serialization in C# for game projects.",
+      "mode": "subagent",
+      "permission": {
+        "bash": { "git *": "allow", "dotnet *": "allow", "*": "ask" },
+        "edit": "allow",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    },
+    "thinker": {
+      "description": "Analytical thinker — deconstructs problems, evaluates trade-offs, identifies risks, and proposes solutions before coding begins.",
+      "mode": "subagent",
+      "permission": {
+        "bash": "ask",
+        "edit": "deny",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    },
+    "planner": {
+      "description": "Project planner — creates milestone plans, breaks features into tasks, identifies dependencies, estimates effort, and tracks risks for game development.",
+      "mode": "subagent",
+      "permission": {
+        "bash": "ask",
+        "edit": "allow",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    }
+  }
+}

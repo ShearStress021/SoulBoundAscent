@@ -1,0 +1,566 @@
+# Project Proposal: Dungeon Master Auto-Battler Strategy Game
+
+## 1. High Concept
+
+A single-player offline PC strategy game where the player is the Master, managing a town, summoning raw heroes, training them into combat roles, assigning squads, preparing items, and sending them into an automated tower dungeon.
+
+The game combines:
+
+- Auto-battler combat inspired by TFT / Auto Chess
+- Hero training and squad selection inspired by Langrisser
+- High-stakes tower survival inspired by Pick Me Up!
+- Roster management, death, revival, and long-term consequences
+
+The player does not directly control units during battle. Instead, the Master wins through preparation: roster decisions, job training, squad choice, deployment formation, item setup, town upgrades, and risk management.
+
+## 2. Core Pillars
+
+| Pillar | Description |
+|---|---|
+| Strategic Preparation | The Master's main decisions happen before battle: who to train, deploy, equip, and support. |
+| High-Stakes Roster Management | Heroes can die, be revived, inherited, or permanently lost. Losses affect the tower. |
+| Deterministic Challenge | Floors are fixed and fair. Player experience changes through strategy, not difficulty sliders. |
+| Town-Based Progression | The town controls training, level caps, equipment, items, revival, and recovery. |
+| Auto-Battler Clarity | Battles resolve automatically, but the player can pause to inspect and understand outcomes. |
+
+## 3. Core Gameplay Loop
+
+1. Return to town.
+2. Review next floor or invasion threat.
+3. Summon raw heroes if resources allow.
+4. Train heroes into jobs.
+5. Select squad type for each deployed hero.
+6. Enhance or repair personal equipment.
+7. Craft/equip auto-trigger consumables.
+8. Choose restaurant buff.
+9. Deploy heroes on the grid.
+10. Start automated battle.
+11. Pause during battle only to inspect.
+12. Resolve victory, defeat, deaths, equipment locks, rewards, and Tower Malice.
+13. Continue climbing or defend invaded floors.
+
+## 4. Combat Format
+
+### Battle Type
+
+Combat is a grid-based auto battler.
+
+- Player places heroes before battle.
+- Battle resolves automatically.
+- Master can pause anytime to inspect units.
+- No direct commands during combat.
+- No manual item activation during combat.
+
+### Battle Modes
+
+| Mode | Description |
+|---|---|
+| Subjugation | Attempt to clear a new tower floor. |
+| Protection | Defend a previously cleared floor from invasion. |
+
+### MVP Board
+
+Recommended MVP board:
+
+```text
+5 columns x 6 rows
+```
+
+- Player deployment area: bottom rows
+- Enemy area: top rows
+- Middle area: contested space
+- Some floors may include hazard or blocked tiles
+
+## 5. Heroes, Jobs, And Squads
+
+### Summoning
+
+Summoning should reduce RNG frustration.
+
+Instead of summoning a fully random class hero, the Summoning Gate gives:
+
+- Star rating
+- Innate attribute
+- Raw/untrained hero
+
+The Master later chooses which job the hero trains into.
+
+Example:
+
+```text
+Summoned Hero:
+Star: 3
+Innate Attribute: Flame
+State: Untrained
+```
+
+### Hero Lifecycle
+
+```text
+Summoned Soul
+-> Untrained Hero
+-> Trained Hero
+-> Deployed Hero
+-> Downed Soul
+-> Revived / Inherited / Permanently Lost
+```
+
+### Untrained Heroes
+
+Untrained heroes can be deployed in emergencies, but:
+
+- No squad
+- No job skill
+- No personal equipment
+- Weaker battlefield impact
+
+If an untrained hero gains levels before choosing a job, they receive minor bonus stats when trained.
+
+### MVP Jobs
+
+| Job | Role |
+|---|---|
+| Warrior | Frontline physical damage |
+| Guardian | Tank/protector |
+| Archer | Ranged physical damage |
+| Mage | Magical damage |
+| Healer | Healing/support |
+
+Commander is a strong future addition but should be stretch for MVP.
+
+### Squad System
+
+Each trained hero chooses one compatible squad before battle.
+
+MVP rules:
+
+- 2 squad choices per job
+- Squad level follows hero level
+- Squad adds stats
+- Squad grants one automatic skill or passive
+- Squad is not simulated as separate soldiers
+
+Example:
+
+| Job | Squad A | Squad B |
+|---|---|---|
+| Warrior | Swordsmen: balanced damage | Duelists: higher crit, lower defense |
+| Guardian | Shield Guard: defense | Spearmen: frontline control |
+| Archer | Bowmen: faster attacks | Crossbowmen: armor pierce |
+| Mage | Fire Circle: AOE/burn | Frost Circle: slow/debuff |
+| Healer | Clerics: stronger heal | Acolytes: faster smaller heal |
+
+## 6. Synergies
+
+Add lightweight auto-chess-style synergies.
+
+MVP synergy rules:
+
+- Only 2 categories: Job Synergy and Innate Attribute Synergy
+- Only 2-unit thresholds for MVP
+- Small readable bonuses
+- Clear deployment UI
+
+Example job synergies:
+
+| Synergy | Requirement | Bonus |
+|---|---:|---|
+| Warriors | 2 Warriors | Warriors gain physical attack |
+| Guardians | 2 Guardians | Guardians gain defense |
+| Archers | 2 Archers | Archers gain range or attack speed |
+| Mages | 2 Mages | Mages gain magical attack |
+| Healers | 2 Healers | Healing increased |
+
+Example attribute synergies:
+
+| Attribute | Requirement | Bonus |
+|---|---:|---|
+| Flame | 2 Flame heroes | Team gains damage |
+| Stone | 2 Stone heroes | Team gains HP |
+| Gale | 2 Gale heroes | Team gains attack speed |
+| Light | 2 Light heroes | Team gains healing received |
+| Shadow | 2 Shadow heroes | Team gains critical chance |
+
+Avoid squad synergies in MVP.
+
+## 7. Combat Math Direction
+
+### Core Stats
+
+| Stat | Function |
+|---|---|
+| HP | Health pool |
+| Physical Attack | Physical damage |
+| Magical Attack | Magical damage |
+| Physical Defense | Flat physical reduction |
+| Magical Defense | Flat magical reduction |
+| Physical Armor | Percent physical reduction |
+| Magical Armor | Percent magical reduction |
+| Attack Speed | Attack frequency |
+| Movement Speed | Grid movement timing |
+| Critical Chance | Chance to crit |
+| Critical Pierce | Amount of defense/armor bypassed on crit |
+
+### Damage Formula
+
+```text
+Reduced Damage = Incoming Damage * (1 - Relevant Armor%)
+Final Damage = max(1, Reduced Damage - Relevant Defense)
+```
+
+Critical hits bypass part of armor and defense based on Critical Pierce.
+
+Healing:
+
+- Restores HP
+- Can crit
+- Crit healing increases heal amount
+
+### Type Advantage
+
+For MVP, use job/type advantage, not elemental combat advantage.
+
+Elemental/innate attributes should mainly affect growth, training affinity, and synergies.
+
+Recommended MVP triangle:
+
+```text
+Warrior beats Archer
+Archer beats Mage
+Mage beats Guardian
+Guardian beats Warrior
+Healer is neutral/support
+```
+
+Suggested values:
+
+```text
+Advantage: +20% damage
+Disadvantage: -10% damage
+```
+
+## 8. Town Systems
+
+The town is the Master's strategic base.
+
+### MVP Buildings
+
+| Building | Function |
+|---|---|
+| Town Hall | Town level, hero level cap, building unlocks |
+| Summoning Gate | Summon raw heroes |
+| Training Facility | Choose job and provide passive XP |
+| Blacksmith | Enhance, repair, and unlock personal equipment |
+| Shrine | Revive souls, inheritance, emergency recovery |
+| Apothecary | Craft auto-trigger consumables |
+| Restaurant | One pre-battle food buff |
+| Barracks | Basic squad upgrades |
+
+Specialized squad buildings can be added later.
+
+### Town Level
+
+Town level controls:
+
+- Hero level cap
+- Building unlocks
+- Training limits
+- Equipment enhancement cap
+- Squad upgrade cap
+
+Final hero level cap:
+
+```text
+Final Cap = min(Star Cap, Town Level Cap)
+```
+
+## 9. Equipment
+
+Each trained hero has fixed personal equipment.
+
+The Master does not swap gear. Instead, the Master can:
+
+- Enhance equipment
+- Repair equipment
+- Eventually awaken equipment
+
+MVP rules:
+
+- Equipment unlocks when hero chooses a job
+- Equipment is fixed to the hero
+- Equipment can be locked on a failed floor
+- Equipment can be recovered by clearing the floor
+- If hero is permanently lost, equipment can be salvaged after recovery
+
+Equipment states:
+
+| State | Meaning |
+|---|---|
+| Available | Hero can use equipment |
+| Locked | Equipment is trapped on a floor |
+| Recovered | Equipment returns after floor clear |
+| Salvageable | Hero is gone; equipment can be dismantled |
+
+## 10. Items And Restaurant Buffs
+
+### Consumables
+
+Items are equipped before battle and trigger automatically.
+
+MVP item limit:
+
+```text
+1 consumable per deployed hero
+```
+
+Example items:
+
+| Item | Trigger | Effect |
+|---|---|---|
+| Elixir | HP <= 70% | Heal + regeneration |
+| Cleansing Herb | Debuff lands | Remove debuff and grant resistance |
+| Barrier Charm | Battle start | Grant shield |
+
+### Restaurant
+
+Restaurant provides one temporary pre-battle buff.
+
+Examples:
+
+| Meal | Effect |
+|---|---|
+| Warrior Stew | Frontline heroes gain HP |
+| Hunter Skewers | Backline heroes gain attack |
+| Focus Tea | First skill cooldown reduced |
+| Blessed Soup | Healing received increased |
+
+Only one meal should be active per dungeon attempt.
+
+## 11. Death, Revival, And Permanent Loss
+
+### Subjugation Outcomes
+
+| Outcome | Result |
+|---|---|
+| Partial win | Floor cleared, dead heroes become revivable souls, equipment retrieved |
+| Total loss | Floor uncleared, souls revivable, equipment locked until floor cleared |
+
+### Protection Outcomes
+
+| Outcome | Result |
+|---|---|
+| Partial win | Floor protected, dead heroes revivable, equipment retrieved |
+| Failed defense | Floor occupied, souls/equipment locked until reclaimed |
+
+### Shrine Revival
+
+The Shrine can revive dead heroes before their souls expire.
+
+Rules:
+
+- Stronger heroes take longer to revive
+- Stronger heroes also have longer soul expiry windows
+- Revived heroes return without locked equipment if equipment is trapped
+- Permanent death occurs when soul expires or inheritance is chosen
+
+### Soul Inheritance
+
+Instead of revival, the Shrine can transfer part of a dead hero's soul.
+
+Inheritance:
+
+- Dead hero is permanently lost
+- Recipient gains XP
+- Compatible recipient may gain minor permanent stats
+- Tower Malice increases partially
+- Faster than revival
+
+MVP can simplify inheritance to XP-only.
+
+## 12. Tower Malice And Invasion
+
+### Tower Malice
+
+Permanent hero loss feeds the tower and increases Tower Malice.
+
+Malice should create pressure, not instant failure.
+
+Possible MVP effects:
+
+| Malice Level | Effect |
+|---:|---|
+| Low | Invasion pressure rises faster |
+| Medium | Invasion enemies gain small bonus |
+| High | Boss or invasion gains extra enemy |
+
+### Invasion
+
+If the Master stalls instead of climbing, upper floors begin invading cleared floors.
+
+Rules:
+
+- First invasion is weaker than the actual upper floor
+- Invasions escalate if the player keeps stalling
+- Invasion rewards are lower than new floor rewards
+- If invasion reaches the homebase, town defense occurs
+- Losing town defense causes game over
+
+For MVP:
+
+- One occupied floor at a time
+- Simple invasion counter
+- Town defense can be stretch if time is tight
+
+## 13. Deployment Limits And Underdog Rewards
+
+Each floor has a max hero deployment cap.
+
+The Master may bring fewer heroes for bonus rewards.
+
+Example:
+
+| Choice | Result |
+|---|---|
+| Bring max heroes | Safer clear |
+| Bring 1 fewer hero | Higher XP/reward |
+| Bring too few heroes | Very risky, optional challenge |
+
+MVP recommendation:
+
+```text
+Only support 1 under-deployment bonus tier.
+```
+
+Example:
+
+```text
+Bring 1 fewer hero than max: +25% XP
+```
+
+## 14. MVP Feature Lock
+
+### MVP Must Include
+
+| Feature | MVP Target |
+|---|---|
+| Floors | 5 handcrafted floors |
+| Combat | Grid-based auto battle |
+| Battle modes | Subjugation + basic Protection |
+| Party size | 4 deployed heroes |
+| Jobs | Warrior, Guardian, Archer, Mage, Healer |
+| Squads | 2 squad options per job |
+| Summoning | Star + innate attribute + untrained hero |
+| Training | Choose job through town |
+| Synergies | Job + attribute, 2-unit threshold |
+| Equipment | Fixed personal equipment, enhance/locked/recovered |
+| Items | 3 auto-trigger consumables |
+| Town | Core buildings only |
+| Shrine | Revival + simple inheritance |
+| Death | Revivable soul, permanent death, Malice |
+| Invasion | Basic escalating invasion pressure |
+| Save/load | Basic local save |
+
+### Stretch Features
+
+| Feature | Notes |
+|---|---|
+| Commander job | Strong fit, but not required for MVP |
+| Equipment awakening | Add after enhancement works |
+| Enemy captured equipment bonuses | Cool but complex |
+| Multi-floor invasions | Full-game feature |
+| Deep inheritance stats/passives | Full-game feature |
+| Specialized squad buildings | Full-game feature |
+| Elemental combat triangle | Avoid until job triangle is stable |
+| Multiple item slots | Later upgrade |
+| Large hero pool | Later content expansion |
+
+## 15. MVP Roadmap
+
+### Month 1: Combat Prototype
+
+- Grid deployment
+- Auto movement and targeting
+- Basic jobs and enemies
+- HP/damage/death
+- Pause inspection
+- One test floor
+
+Exit goal:
+
+```text
+Player can deploy units, start auto battle, inspect, and resolve win/loss.
+```
+
+### Month 2: Hero And Town Systems
+
+- Summoning raw heroes
+- Training into jobs
+- Squad selection
+- Basic town screen
+- Personal equipment
+- Save/load
+
+Exit goal:
+
+```text
+Player can build a roster and prepare for floors through town systems.
+```
+
+### Month 3: Death, Invasion, And Content
+
+- 5 floors
+- Shrine revival
+- Equipment locking/recovery
+- Tower Malice
+- Basic invasion/protection mode
+- Consumable items
+- Restaurant buff
+
+Exit goal:
+
+```text
+Player can complete the full tower slice with losses and recovery.
+```
+
+### Month 4: Polish And Balance
+
+- UI clarity
+- Synergy panel
+- Better battle feedback
+- Balance pass
+- Audio/VFX
+- Tutorial prompts
+- Bug fixing
+
+Exit goal:
+
+```text
+A new player can understand and complete the demo without developer explanation.
+```
+
+## 16. Key Risks
+
+| Risk | Mitigation |
+|---|---|
+| Too many systems | Lock MVP tightly and defer stretch features |
+| Auto battle feels unclear | Add pause inspection, clear UI, visible targeting, combat log |
+| Death spiral | Add Shrine revival and one emergency recovery option |
+| Economy imbalance | Use fixed floor rewards for MVP |
+| Synergies become overwhelming | Only 2-unit job/attribute synergies |
+| Equipment scope grows | Fixed personal equipment only, no loot inventory |
+| Invasion too punishing | Start with one occupied floor and clear warnings |
+| Squad system too large | 2 squad options per job, no separate squad XP |
+
+## 17. Current Design Position
+
+The project should be pitched as:
+
+```text
+A single-player dungeon auto-battler where the player acts as the Master:
+summoning raw heroes, training them into jobs, assigning squads, upgrading
+their personal equipment, preparing town resources, and sending them into a
+dangerous tower where death, revival, inheritance, invasion, and Tower Malice
+shape the campaign.
+```
+
+This is the strongest current direction because it has a clear identity, supports long-term strategy, and remains achievable if the MVP scope is controlled.
