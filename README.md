@@ -20,24 +20,24 @@ To switch to a specific branch in the repository, follow these steps:
 
 1. **Clone the Repository** (if you haven't already):
 
-```bash
-git clone https://github.com/ShearStress021/SoulBoundAscent.git
-```
+   ```bash
+   git clone https://github.com/ShearStress021/SoulBoundAscent.git
+   ```
 &emsp; or
 
-```bash
-gh repo clone ShearStress021/SoulBoundAscent/.git
-```
+   ```bash
+   gh repo clone ShearStress021/SoulBoundAscent/.git
+   ```
 
 2. **Navigate to the Project Directory**:
 
-```bash
-cd SoulBoundAscent
-```
+   ```bash
+   cd SoulBoundAscent
+   ```
 3. **Create a new Branch and switch to the branch**
-```bash
-git checkout -b <branch-name/feature-name>
-```
+   ```bash
+   git checkout -b <branch-name/feature-name>
+   ```
 ### Steps to Work on Project Locally
 1. **Pull Latest Changes from dev branch**
    - Fetch the latest updates from the `dev` branch:
