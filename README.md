@@ -23,7 +23,7 @@ To switch to a specific branch in the repository, follow these steps:
    ```bash
    git clone https://github.com/ShearStress021/SoulBoundAscent.git
    ```
-&emsp; or
+      &emsp; or
 
    ```bash
    gh repo clone ShearStress021/SoulBoundAscent/.git
