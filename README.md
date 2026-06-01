@@ -32,7 +32,7 @@ gh repo clone ShearStress021/SoulBoundAscent/.git
 2. **Navigate to the Project Directory**:
 
 ```bash
-cd PathFinder
+cd SoulBoundAscent
 ```
 3. **Create a new Branch and switch to the branch**
 ```bash
