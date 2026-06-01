@@ -46,7 +46,7 @@ To switch to a specific branch in the repository, follow these steps:
      ```
    - Merge the latest changes from `dev` into your branch:
      ```bash
-     git merge origin/dev
+     git rebase origin/dev
      ```
 
 2. **Create and Switch to Your Branch**
