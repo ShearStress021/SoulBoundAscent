@@ -14,8 +14,8 @@
       "mode": "subagent",
       "permission": {
         "bash": { "git *": "allow", "dotnet *": "allow", "npm *": "allow", "pip *": "allow", "*": "ask" },
-        "edit": "allow",
-        "read": "allow",
+        "edit": "ask",
+        "read": "ask",
         "glob": "allow",
         "grep": "allow"
       }
@@ -25,8 +25,8 @@
       "mode": "subagent",
       "permission": {
         "bash": { "git *": "allow", "dotnet *": "allow", "npm *": "allow", "*": "ask" },
-        "edit": "allow",
-        "read": "allow",
+        "edit": "ask",
+        "read": "ask",
         "glob": "allow",
         "grep": "allow"
       }
@@ -36,8 +36,19 @@
       "mode": "subagent",
       "permission": {
         "bash": { "git *": "allow", "dotnet *": "allow", "*": "ask" },
-        "edit": "allow",
-        "read": "allow",
+        "edit": "ask",
+        "read": "ask",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    },
+    "game-physics": {
+      "description": "Grid simulation and combat movement specialist — designs deterministic grid movement, occupancy, range checks, battle timing, and collision rules for Soulbound Ascent.",
+      "mode": "subagent",
+      "permission": {
+        "bash": { "git *": "allow", "dotnet *": "allow", "*": "ask" },
+        "edit": "ask",
+        "read": "ask",
         "glob": "allow",
         "grep": "allow"
       }
