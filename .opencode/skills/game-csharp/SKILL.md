@@ -1,80 +1,101 @@
 ---
 name: game-csharp
-description: Use when writing game-specific C# logic — state machines, object pooling, event systems, serialization, game math, combat systems, AI behavior trees, or save/load. Differentiate from unity-csharp: this is for game logic patterns, not Unity API usage.
+description: Use when writing game-specific C# logic for Soulbound Ascent: combat rules, targeting, AI decisions, state machines, stats, modifiers, save/load data models, deterministic simulations, and pure C# systems separate from Unity scene glue.
 ---
 
-# Game C# Programming
+# Soulbound Ascent Game C#
 
-## State Machines
+## Boundary
+
+Use this skill for gameplay rules. Keep Unity-specific rendering, prefab, scene, and Inspector work in `unity-csharp`.
+
+Good pure C# candidates:
+
+- Grid coordinates and occupancy rules.
+- Unit runtime state.
+- Target selection.
+- Damage and healing calculation.
+- Type advantage and synergy modifiers.
+- Battle phase state.
+- Save data DTOs.
+
+## Combat Slice Rules
+
+Implement the first combat slice before deeper systems:
+
+- 4 heroes vs one floor config.
+- Nearest valid target selection.
+- Cell-by-cell movement.
+- Adjacent melee range for first pass.
+- Fixed attack timers from attack speed.
+- Damage, death, retargeting, win/loss.
+
+## State And Data
+
+Prefer explicit state over boolean piles:
 
 ```csharp
-public interface IState { void Enter(); void Tick(float dt); void Exit(); }
-public class StateMachine
+public enum UnitState
 {
-    private Dictionary<Type, IState> _states;
-    private IState _current;
-    public void Change<T>() where T : IState { ... }
+    Idle,
+    Moving,
+    Attacking,
+    Dead
 }
 ```
 
-- Use hierarchical state machines for complex AI (Idle → Patrol → Alert → Combat).
-- State machines > booleans for character/UI/enemy behavior.
-
-## Event System
+Runtime objects should copy from config:
 
 ```csharp
-public static class Events
+public sealed class UnitRuntime
 {
-    public static event Action<Unit, Unit> OnUnitDied;
-    public static void UnitDied(Unit victim, Unit killer) => OnUnitDied?.Invoke(victim, killer);
+    public string Id { get; }
+    public GridPosition Position { get; private set; }
+    public UnitStats Stats { get; }
+    public int CurrentHp { get; private set; }
 }
 ```
 
-- Or use a message bus with interfaces (`IUnitDiedHandler`) for type safety.
-- Always unsubscribe in `OnDisable` / `Dispose`.
+## Damage Pipeline
 
-## Object Pooling
+Keep the MVP formula readable:
 
-```csharp
-public class ObjectPool<T> where T : Component
-{
-    private Stack<T> _pool = new();
-    public T Get() => _pool.Count > 0 ? _pool.Pop() : Create();
-    public void Return(T obj) { obj.gameObject.SetActive(false); _pool.Push(obj); }
-}
+```text
+reduced = incomingDamage * (1 - relevantArmorPercent)
+final = max(1, reduced - relevantDefense)
+advantage: +20% damage
+disadvantage: -10% damage
 ```
 
-## Game Math
+Apply modifiers in an obvious order:
 
-- **Lerp**: `Mathf.Lerp(current, target, Time.deltaTime * speed)` for smooth interpolation.
-- **MoveTowards**: `Vector3.MoveTowards` for constant-speed movement.
-- **SmoothDamp**: `Vector3.SmoothDamp` for camera follow, UI animation.
-- **Damage formula**: `damage = baseDamage * (1 - armor / (armor + constant))` for diminishing returns.
+1. Base stat and skill value.
+2. Type advantage.
+3. Synergy or buff modifiers.
+4. Armor percentage.
+5. Flat defense.
+6. Clamp and apply.
 
-## Save / Load
+## Targeting And AI
 
-```csharp
-[Serializable]
-public class SaveData
-{
-    public List<HeroData> Heroes;
-    public TownData Town;
-    public int CurrentFloor;
-}
-```
+- Pick nearest living enemy by Manhattan distance.
+- Retarget when the current target dies.
+- If tied, use deterministic ordering such as lowest row, then column, then stable unit id.
+- Keep AI decision-making separate from movement execution.
 
-- Use `JsonUtility` or `Newtonsoft.Json` for serialization.
-- Write to `Application.persistentDataPath`.
-- Version your save data for forward compatibility.
+## Save Data
 
-## Combat System
+- Save serializable data only: roster, town state, floor progress, resources, revive timers.
+- Do not save scene object references.
+- Include a save version field immediately.
 
-- Separate damage calculation into a `DamageCalculator` with modifiers/debuffs/buffs applied as a pipeline.
-- Use `ScriptableObject` for all ability/stat definitions.
-- Combat resolution: gather modifiers → compute hit → apply damage → trigger events.
+## Testing Bias
 
-## AI Behavior Trees
+For pure logic, prefer tests or small console-style harnesses that verify:
 
-- Root → Selector → Sequence → Action/Condition.
-- Use `ScriptableObject` trees for designer-friendly AI.
-- Keep leaf Actions small and testable.
+- Damage formula.
+- Type advantage.
+- Target selection.
+- Movement legality.
+- Win/loss detection.
+- Save DTO round trip.

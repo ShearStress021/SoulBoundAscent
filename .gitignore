@@ -1,8 +1,86 @@
 # OS/editor noise
 Thumbs.db
 .DS_Store
+Desktop.ini
+.idea/
+.vscode/
+.vs/
+*.swp
 
 # Local notes/build outputs
 dist/
 tmp/
 *.log
+
+# Planning artifact scratch files
+Planning/docx_render/
+Planning/report_render/
+Planning/render_tmp/
+Planning/tmp/
+Planning/tmp_home/
+Planning/xdg_cache/
+Planning/xdg_config/
+Planning/write_test.tmp
+Planning/~$*
+~$*
+
+# Visual Studio / Rider / Unity IDE generated files
+*.sln
+*.slnx
+*.csproj
+*.user
+*.userprefs
+*.suo
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.DotSettings.user
+.vsconfig
+
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+
+# Unity generated folders anywhere in the repo
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Oo]bj/
+**/[Bb]uild/
+**/[Bb]uilds/
+**/[Ll]ogs/
+**/[Uu]ser[Ss]ettings/
+**/[Mm]emoryCaptures/
+
+# Unity generated files
+*.tmp
+
+# Unity crash and profiling output
+sysinfo.txt
+*.stackdump
+
+# Unity starter/template clutter
+**/Assets/TutorialInfo/
+**/Assets/TutorialInfo.meta
+**/Assets/Readme.asset
+**/Assets/Readme.asset.meta
+**/Assets/Scenes/SampleScene.unity
+**/Assets/Scenes/SampleScene.unity.meta
+
+# Asset store tools and local packages
+Assets/AssetStoreTools*
+Assets/Plugins/Editor/JetBrains*
+
+# Builds and packaged exports
+*.apk
+*.aab
+*.unitypackage

@@ -1,66 +1,82 @@
 ---
 name: planning
-description: Use when breaking down features into tasks, creating milestones, estimating effort, managing dependencies, sprint planning, or risk assessment for game development projects. Use BEFORE starting a new sprint or milestone.
+description: Use when planning Soulbound Ascent milestones, sprints, feature breakdowns, task ownership, dependencies, effort estimates, risk registers, cut lines, and vertical-slice checkpoints.
 ---
 
-# Planning
+# Soulbound Ascent Planning
 
-## Milestone Structure
+## Planning Priority
 
+Month 1 must prove combat. Do not plan town, death, invasion, restaurant, equipment depth, or final polish as active work until the combat loop can be played.
+
+First playable checkpoint:
+
+```text
+Deploy 4 heroes on a 5x6 grid -> start auto-battle -> units move/target/attack -> deaths resolve -> victory/defeat screen -> pause inspection and combat log work.
 ```
-Month 1: Core Combat Prototype
-  Week 1: Grid deployment + basic movement
-  Week 2: Auto-targeting + damage system
-  Week 3: Win/loss conditions + 1 test floor
-  Week 4: Pause inspection + combat log
-  Exit: Player can deploy, battle, and resolve win/loss.
-```
 
-Each milestone must have an **exit goal** (one sentence) that is testable.
-
-## Task Breakdown
+## Task Shape
 
 Each task should be:
-- **Independent**: Can be worked on without waiting for others (where possible)
-- **Testable**: Has a clear success criteria
-- **Sized**: 1-3 days of work (split if larger)
-- **Owned**: One person responsible
 
-## Dependency Mapping
+- Owned by one person.
+- Sized to 0.5-2 days when possible.
+- Attached to a dependency.
+- Verified with visible play-mode behavior or a test.
 
+Use this format:
+
+```text
+[ ] Task name (effort: S/M/L) - owner: Name
+    Depends on: task or "none"
+    Success criteria: observable result
 ```
-[Arena Grid] → [Unit Movement] → [Auto-Targeting] → [Damage System]
-                                                      ↓
-                                              [Win/Loss Conditions]
+
+## Critical Path For Month 1
+
+```text
+Unity scaffold
+-> grid cells and coordinates
+-> unit runtime model
+-> deployment
+-> movement
+-> targeting
+-> damage
+-> death
+-> win/loss
+-> integration/balance pass
 ```
 
-Identify the **critical path** — the longest chain of dependencies. Shorten it by parallelizing independent tasks.
+UI, placeholder art, logs, and VFX should run in parallel after their dependencies are ready.
 
-## Risk Register
+## Effort Scale
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Combat feels random | Medium | High | Pause inspection + combat log |
-| Scope too large | High | High | Locked MVP feature table |
-| Unity learning curve | Medium | Medium | Simple scenes, no physics |
+- `S`: half day, known implementation.
+- `M`: 1-2 days, clear but needs wiring.
+- `L`: 3-5 days, uncertain or cross-system.
+- `XL`: too large for a sprint task; split or spike first.
 
-## Sprint Cadence
+## Cut Order
 
-- **Week sprint** (1 week): Too short for game dev, forces micro-planning.
-- **Two-week sprint**: Balanced for game features.
-- **Month sprint**: Better aligned with school semester milestones.
+Cut in this order before reducing combat clarity:
 
-For this project:
-- Month 1: Prove combat works
-- Month 2: Build hero/town systems
-- Month 3: Add content + consequences
-- Month 4: Polish + presentation
+1. Restaurant.
+2. Multiple consumable types.
+3. Invasion/protection.
+4. Advanced equipment states.
+5. Complex boss mechanics.
+6. Synergy UI polish.
+7. Audio/music.
 
-## Effort Estimation
+## Risk Register Prompts
 
-- **S**: Half day, well-understood
-- **M**: 1-2 days, clear approach
-- **L**: 3-5 days, some unknowns
-- **XL**: 1-2 weeks, significant unknowns (spike first)
+Track:
 
-Sum estimates per milestone. If total exceeds available time, cut scope (not quality).
+- Risk.
+- Likelihood.
+- Impact.
+- Mitigation.
+- Owner.
+- Date to reassess.
+
+Common risks: over-scoping, unclear combat, scene merge conflicts, save/load delay, UI flow growth, and placeholder content becoming permanent without intent.

@@ -1,55 +1,69 @@
 ---
 name: unity-csharp
-description: Use when writing or reviewing Unity C# code, including MonoBehaviours, ScriptableObjects, Editor scripting, Unity performance optimization, or Unity-specific API usage.
+description: Use when writing or reviewing Unity-specific C# for Soulbound Ascent, including MonoBehaviours, ScriptableObjects, prefabs, scenes, UI wiring, editor tools, pooling, Unity lifecycle, save paths, and performance in Unity.
 ---
 
-# Unity C# Development
+# Soulbound Ascent Unity C#
 
-## MonoBehaviour Lifecycle
+## Unity Role
 
-```csharp
-Awake()    → OnEnable() → Start() → FixedUpdate() → Update() → LateUpdate() → OnDisable() → OnDestroy()
-```
+Use Unity behaviours as scene adapters and presentation glue. Keep reusable combat, targeting, damage, and save rules in plain C# classes when practical.
 
-- `Awake`: Initialize references, no assumptions about other objects.
-- `Start`: Initialize state that depends on other objects being awake.
-- Avoid `Update()` loops when possible — use events, coroutines, or DOTween.
+## MonoBehaviour Conventions
 
-## ScriptableObject Best Practices
-
-- Use ScriptableObjects for all configurable data (stats, items, enemy definitions).
-- Never mutate ScriptableObjects at runtime unless intentional (localization, save data).
-- Use `CreateAssetMenu` attribute for editor-friendly creation.
-
-## Performance
-
-- **Object Pooling**: Reuse GameObjects instead of Instantiate/Destroy.
-- **Avoid `Find()` / `FindObjectOfType()`**: Cache references via Inspector or dependency injection.
-- **Use `TryGetComponent`** over `GetComponent` when component may not exist.
-- **Burst Compiler**: Mark job structs with `[BurstCompile]`.
-- **Job System**: Use `IJobParallelFor` for data-parallel work.
-- **ECS / DOTS**: Consider for large-scale entity counts.
-
-## Editor Scripting
+- Use `[SerializeField] private` for Inspector references.
+- Cache component references in `Awake`.
+- Initialize cross-object state in `Start` or explicit setup methods.
+- Subscribe in `OnEnable`; unsubscribe in `OnDisable` or `OnDestroy`.
+- Keep `Update` lean. Prefer events, coroutines, or explicit battle ticks.
+- Use `[Header]`, `[Tooltip]`, and `[Range]` for Inspector clarity.
 
 ```csharp
-[CustomEditor(typeof(MyComponent))]
-public class MyComponentEditor : Editor { ... }
+public sealed class UnitView : MonoBehaviour
+{
+    [SerializeField] private Transform modelRoot;
+    [SerializeField] private HealthBar healthBar;
+
+    private UnitRuntime unit;
+
+    public void Bind(UnitRuntime unitRuntime)
+    {
+        unit = unitRuntime;
+        healthBar.SetValue(unit.CurrentHp, unit.MaxHp);
+    }
+}
 ```
 
-- `[Range(min, max)]`, `[Header("...")]`, `[Tooltip("...")]` for Inspector UX.
-- `[ExecuteAlways]` for editor-time behaviors.
+## ScriptableObjects
 
-## Coroutines vs Async
+Use ScriptableObjects for data the team will tune:
 
-| Approach | Use Case |
-|---|---|
-| `StartCoroutine` | Time delays, frame waits, sequences |
-| `async/await` | Web requests, file I/O, any .NET Task |
-| `UniTask` | Zero-allocation async for Unity (preferred) |
+- Unit configs.
+- Enemy configs.
+- Floor wave configs.
+- Job and squad definitions.
+- Item and meal configs.
+- VFX/audio lookup data.
 
-## Unity Addressables
+Do not mutate ScriptableObject assets during battle. Copy asset data into runtime state objects.
 
-- Use Addressables for dynamic asset loading.
-- `Addressables.LoadAssetAsync<T>()` / `Addressables.InstantiateAsync()`.
-- Manage dependencies via labels, not direct references.
+## Scene And Prefab Guidance
+
+- Keep the first combat scene simple: camera, grid root, unit spawn roots, canvas, battle bootstrap.
+- Prefer prefab variants for hero/enemy visuals.
+- Keep grid cells clickable in preparation mode only.
+- Block deployment input after battle starts except pause/inspection.
+- Use TextMeshPro for combat log, damage numbers, and placeholder labels.
+
+## Unity Save/Load
+
+- Use `Application.persistentDataPath` for local saves.
+- Keep save data as serializable DTOs, not live MonoBehaviours.
+- Version save data from the first implementation.
+
+## Performance Baseline
+
+- Pool damage numbers, hit flashes, and frequently spawned VFX.
+- Avoid `FindObjectOfType` and broad scene searches in runtime loops.
+- Avoid physics queries for grid truth; use grid occupancy data.
+- Profile before adding DOTS, jobs, Addressables, or complex pooling frameworks.
