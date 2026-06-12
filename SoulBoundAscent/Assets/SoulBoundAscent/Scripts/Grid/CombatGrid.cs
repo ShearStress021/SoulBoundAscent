@@ -1,4 +1,8 @@
+
+using SoulBoundAscent.Units;
+
 namespace SoulBoundAscent.Grid
+
 {
     public sealed class CombatGrid
     {
@@ -33,6 +37,36 @@ namespace SoulBoundAscent.Grid
         public CombatGridCell GetCell(GridPosition position)
         {
             return cells[position.X, position.Y];
+        }
+
+        public bool TryMoveUnit(CombatUnit unit, GridPosition destination)
+        {
+            if(unit == null || !IsInBounds(destination))
+            {
+                return false;
+            }
+
+            var currentPosition = unit.Position;
+
+            if (!IsInBounds(currentPosition))
+            {
+                return false;
+            }
+
+
+            var currentCell = GetCell(currentPosition);
+            var destinationCell = GetCell(destination);
+
+            if(currentCell.Occupant != unit || destinationCell.IsOccupied)
+            {
+                return false;
+            }
+
+            currentCell.ClearOccupant();
+            destinationCell.SetOccupant(unit);
+            unit.SetPosition(destination);
+            return true;
+
         }
     }
 }
