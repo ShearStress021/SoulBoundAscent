@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using SoulBoundAscent.Units;
 
@@ -23,7 +25,13 @@ namespace SoulBoundAscent.Grid
         [SerializeField] private Material[] heroMaterials;
         [SerializeField] private Material enemyMaterial;
 
+
+        [Header("Movement")]
+        [SerializeField] private float movementInterval = 0.5f;
+        [SerializeField] private float movementDuration = 0.25f;
+
         private CombatGrid combatGrid;
+        private readonly List<UnitRuntime> runtimeUnits = new();
         private Material fallbackPlayerZoneMaterial;
         private Material fallbackEnemyZoneMaterial;
         private Material fallbackNeutralZoneMaterial;
@@ -61,6 +69,7 @@ namespace SoulBoundAscent.Grid
             ClearChildren(gridRoot);
             ClearChildren(unitsRoot);
 
+            runtimeUnits.Clear();
             combatGrid = new CombatGrid(columns, rows);
 
             for (var y = 0; y < combatGrid.Rows; y++)
@@ -82,6 +91,8 @@ namespace SoulBoundAscent.Grid
             {
                 CreateUnit($"Enemy_{i + 1}", CombatTeam.Enemy, EnemyCells[i], enemyMaterial, PrimitiveType.Sphere);
             }
+
+            StartCoroutine(MovementLoop());
         }
 
         private void CreateCell(CombatGridCell gridCell)
@@ -125,6 +136,210 @@ namespace SoulBoundAscent.Grid
 
             var renderer = unit.GetComponent<Renderer>();
             renderer.sharedMaterial = GetUnitMaterial(team, material);
+
+            runtimeUnits.Add(new UnitRuntime(combatUnit,unit.transform));
+        }
+
+        private IEnumerator MovementLoop()
+        {
+            var wait = new WaitForSeconds(movementInterval);
+
+            while (true)
+            {
+                yield return wait;
+
+                var movements = MoveUnits();
+
+                if(movements.Count > 0)
+                {
+                    yield return AnimateMovements(movements);
+                }
+            }
+        }
+
+
+
+
+        private Dictionary<Transform, Vector3> MoveUnits()
+        {
+            var movements = new Dictionary<Transform, Vector3>();
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                var target = FindNearestOpponent(runtimeUnit.Model);
+
+                if (target == null)
+                {
+                    continue;
+                }
+
+                var distance = GetDistance(
+                    runtimeUnit.Model.Position,
+                    target.Position);
+
+                if (distance <= 1)
+                {
+                    continue;
+                }
+
+                if (!TryChooseNextPosition(
+                        runtimeUnit.Model,
+                        target,
+                        out var destination))
+                {
+                    continue;
+                }
+
+                if (combatGrid.TryMoveUnit(
+                        runtimeUnit.Model,
+                        destination))
+                {
+                    movements[runtimeUnit.Visual] =
+                        GridToWorld(destination, 0.5f);
+                }
+            }
+
+            return movements;
+        }
+        private CombatUnit FindNearestOpponent(CombatUnit unit)
+        {
+            CombatUnit nearest = null;
+            var nearestDistance = int.MaxValue;
+
+            foreach (var candidate in runtimeUnits)
+            {
+                if (candidate.Model.Team == unit.Team)
+                {
+                    continue;
+                }
+
+                var distance = GetDistance(
+                    unit.Position,
+                    candidate.Model.Position);
+
+                if (distance < nearestDistance)
+                {
+                    nearest = candidate.Model;
+                    nearestDistance = distance;
+                }
+            }
+
+            return nearest;
+        }
+
+        private static int GetDistance(
+            GridPosition first,
+            GridPosition second)
+        {
+            return Mathf.Abs(first.X - second.X) +
+                   Mathf.Abs(first.Y - second.Y);
+        }
+
+        private bool TryChooseNextPosition(
+    CombatUnit unit,
+    CombatUnit target,
+    out GridPosition destination)
+        {
+            var current = unit.Position;
+            var deltaX = target.Position.X - current.X;
+            var deltaY = target.Position.Y - current.Y;
+
+            var horizontalStep = new GridPosition(
+                current.X + GetDirection(deltaX),
+                current.Y);
+
+            var verticalStep = new GridPosition(
+                current.X,
+                current.Y + GetDirection(deltaY));
+
+            if (Mathf.Abs(deltaY) >= Mathf.Abs(deltaX))
+            {
+                if (CanEnter(verticalStep))
+                {
+                    destination = verticalStep;
+                    return true;
+                }
+
+                if (CanEnter(horizontalStep))
+                {
+                    destination = horizontalStep;
+                    return true;
+                }
+            }
+            else
+            {
+                if (CanEnter(horizontalStep))
+                {
+                    destination = horizontalStep;
+                    return true;
+                }
+
+                if (CanEnter(verticalStep))
+                {
+                    destination = verticalStep;
+                    return true;
+                }
+            }
+
+            destination = current;
+            return false;
+        }
+
+        private bool CanEnter(GridPosition position)
+        {
+            return combatGrid.IsInBounds(position) &&
+                   !combatGrid.GetCell(position).IsOccupied;
+        }
+
+        private static int GetDirection(int difference)
+        {
+            if (difference > 0)
+            {
+                return 1;
+            }
+
+            if (difference < 0)
+            {
+                return -1;
+            }
+
+            return 0;
+        }
+        private IEnumerator AnimateMovements(Dictionary<Transform, Vector3> movements)
+        {
+            var startingPositions =
+                new Dictionary<Transform, Vector3>();
+
+            foreach (var movement in movements)
+            {
+                startingPositions[movement.Key] =
+                    movement.Key.localPosition;
+            }
+
+            var elapsed = 0f;
+
+            while (elapsed < movementDuration)
+            {
+                elapsed += Time.deltaTime;
+
+                var progress = movementDuration <= 0f
+                    ? 1f
+                    : Mathf.Clamp01(elapsed / movementDuration);
+
+                foreach (var movement in movements)
+                {
+                    movement.Key.localPosition = Vector3.Lerp(
+                        startingPositions[movement.Key],
+                        movement.Value,
+                        progress);
+                }
+
+                yield return null;
+            }
+
+            foreach (var movement in movements)
+            {
+                movement.Key.localPosition = movement.Value;
+            }
         }
 
         private Material GetCellMaterial(int row)
@@ -185,6 +400,18 @@ namespace SoulBoundAscent.Grid
             for (var i = root.childCount - 1; i >= 0; i--)
             {
                 Destroy(root.GetChild(i).gameObject);
+            }
+        }
+
+        private sealed class UnitRuntime
+        {
+            public CombatUnit Model { get; }
+            public Transform Visual { get; }
+
+            public UnitRuntime(CombatUnit model, Transform visual)
+            {
+                Model = model;
+                Visual = visual;
             }
         }
     }
