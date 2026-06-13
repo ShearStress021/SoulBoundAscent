@@ -68,5 +68,22 @@ namespace SoulBoundAscent.Grid
             return true;
 
         }
+        public bool RemoveUnit(CombatUnit unit)
+        {
+            if (unit == null || !IsInBounds(unit.Position))
+            {
+                return false;
+            }
+
+            var cell = GetCell(unit.Position);
+
+            if (cell.Occupant != unit)
+            {
+                return false;
+            }
+
+            cell.ClearOccupant();
+            return true;
+        }
     }
 }
