@@ -1,5 +1,8 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using SoulBoundAscent.Units;
+using SoulBoundAscent.Battle;
 
 namespace SoulBoundAscent.Grid
 {
@@ -23,7 +26,20 @@ namespace SoulBoundAscent.Grid
         [SerializeField] private Material[] heroMaterials;
         [SerializeField] private Material enemyMaterial;
 
+
+        [Header("Movement")]
+        [SerializeField] private float movementInterval = 0.5f;
+        [SerializeField] private float movementDuration = 0.25f;
+
+        [Header("Combat")]
+        [SerializeField] private float attackInterval = 1f;
+
+        [Header("Death")]
+        [SerializeField] private float deathFadeDuration = 0.4f;
+
         private CombatGrid combatGrid;
+        private BattleResult battleResult = BattleResult.InProgress;
+        private readonly List<UnitRuntime> runtimeUnits = new();
         private Material fallbackPlayerZoneMaterial;
         private Material fallbackEnemyZoneMaterial;
         private Material fallbackNeutralZoneMaterial;
@@ -61,6 +77,8 @@ namespace SoulBoundAscent.Grid
             ClearChildren(gridRoot);
             ClearChildren(unitsRoot);
 
+            runtimeUnits.Clear();
+            battleResult = BattleResult.InProgress;
             combatGrid = new CombatGrid(columns, rows);
 
             for (var y = 0; y < combatGrid.Rows; y++)
@@ -82,6 +100,9 @@ namespace SoulBoundAscent.Grid
             {
                 CreateUnit($"Enemy_{i + 1}", CombatTeam.Enemy, EnemyCells[i], enemyMaterial, PrimitiveType.Sphere);
             }
+
+            StartCoroutine(MovementLoop());
+            StartCoroutine(AttackLoop());
         }
 
         private void CreateCell(CombatGridCell gridCell)
@@ -125,6 +146,608 @@ namespace SoulBoundAscent.Grid
 
             var renderer = unit.GetComponent<Renderer>();
             renderer.sharedMaterial = GetUnitMaterial(team, material);
+
+            var targetLine = CreateTargetLine(unit, team);
+
+            runtimeUnits.Add(
+                new UnitRuntime(
+                    combatUnit,
+                    unit.transform,
+                    renderer,
+                    targetLine));
+        }
+
+        private LineRenderer CreateTargetLine(GameObject unit,CombatTeam team)
+        {
+            var line = unit.AddComponent<LineRenderer>();
+
+            line.enabled = false;
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.startWidth = 0.06f;
+            line.endWidth = 0.06f;
+
+            var shader = Shader.Find(
+                "Universal Render Pipeline/Unlit");
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Sprites/Default");
+            }
+
+            if (shader != null)
+            {
+                line.material = new Material(shader);
+            }
+
+            var color = team == CombatTeam.Hero
+                ? Color.cyan
+                : Color.red;
+
+            line.startColor = color;
+            line.endColor = color;
+
+            return line;
+        }
+        private IEnumerator MovementLoop()
+        {
+            var wait = new WaitForSeconds(movementInterval);
+
+            while (battleResult == BattleResult.InProgress)
+            {
+                yield return wait;
+
+                if (battleResult != BattleResult.InProgress)
+                {
+                    yield break;
+                }
+
+                var movements = MoveUnits();
+
+                if (movements.Count > 0)
+                {
+                    yield return AnimateMovements(movements);
+                }
+
+                UpdateTargets();
+                UpdateTargetLines();
+            }
+        }
+
+        private IEnumerator AttackLoop()
+        {
+            var wait = new WaitForSeconds(attackInterval);
+
+            while (battleResult == BattleResult.InProgress)
+            {
+                yield return wait;
+
+                if (battleResult != BattleResult.InProgress)
+                {
+                    yield break;
+                }
+
+                ProcessAttacks();
+                UpdateTargets();
+                UpdateTargetLines();
+            }
+        }
+
+
+        private void ProcessAttacks()
+        {
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                if (battleResult != BattleResult.InProgress)
+                {
+                    break;
+                }
+                var attacker = runtimeUnit.Model;
+                var target = attacker.CurrentTarget;
+
+                if (!CanAttack(attacker, target))
+                {
+                    continue;
+                }
+
+                var damageDealt = target.TakeDamage(
+                    attacker.AttackDamage);
+
+                Debug.Log(
+                    $"{attacker.Name} attacks {target.Name} " +
+                    $"for {damageDealt} damage " +
+                    $"({target.CurrentHealth}/{target.MaxHealth} HP)",
+                    this);
+
+                if (target.IsDefeated)
+                {
+                    HandleDefeat(target);
+                    CheckBattleResult();
+                }
+            }
+        }
+        private void HandleDefeat(CombatUnit defeatedUnit)
+        {
+            defeatedUnit.ClearTarget();
+            combatGrid.RemoveUnit(defeatedUnit);
+
+            var defeatedRuntime = FindRuntimeUnit(defeatedUnit);
+
+            if (defeatedRuntime != null)
+            {
+                if (defeatedRuntime.TargetLine != null)
+                {
+                    defeatedRuntime.TargetLine.enabled = false;
+                }
+
+                StartCoroutine(FadeAndRemove(defeatedRuntime));
+            }
+
+            Debug.Log(
+                $"{defeatedUnit.Name} was defeated.",
+                this);
+        }
+        private IEnumerator FadeAndRemove(
+    UnitRuntime defeatedRuntime)
+        {
+            var visual = defeatedRuntime.Visual;
+            var renderer = defeatedRuntime.Renderer;
+
+            if (visual == null)
+            {
+                yield break;
+            }
+
+            var startingScale = visual.localScale;
+            var startingColor = Color.white;
+
+            Material fadeMaterial = null;
+
+            if (renderer != null)
+            {
+                fadeMaterial = renderer.material;
+
+                if (fadeMaterial.HasProperty("_BaseColor"))
+                {
+                    startingColor =
+                        fadeMaterial.GetColor("_BaseColor");
+                }
+                else if (fadeMaterial.HasProperty("_Color"))
+                {
+                    startingColor = fadeMaterial.color;
+                }
+            }
+
+            var elapsed = 0f;
+
+            while (elapsed < deathFadeDuration)
+            {
+                elapsed += Time.deltaTime;
+
+                var progress = deathFadeDuration <= 0f
+                    ? 1f
+                    : Mathf.Clamp01(
+                        elapsed / deathFadeDuration);
+
+                visual.localScale = Vector3.Lerp(
+                    startingScale,
+                    Vector3.zero,
+                    progress);
+
+                if (fadeMaterial != null)
+                {
+                    var color = startingColor;
+                    color.a = 1f - progress;
+
+                    if (fadeMaterial.HasProperty("_BaseColor"))
+                    {
+                        fadeMaterial.SetColor(
+                            "_BaseColor",
+                            color);
+                    }
+
+                    if (fadeMaterial.HasProperty("_Color"))
+                    {
+                        fadeMaterial.color = color;
+                    }
+                }
+
+                yield return null;
+            }
+
+            if (visual != null)
+            {
+                Destroy(visual.gameObject);
+            }
+        }
+
+        private void CheckBattleResult()
+        {
+            if (battleResult != BattleResult.InProgress)
+            {
+                return;
+            }
+
+            var livingHeroes = 0;
+            var livingEnemies = 0;
+
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                if (runtimeUnit.Model.IsDefeated)
+                {
+                    continue;
+                }
+
+                if (runtimeUnit.Model.Team == CombatTeam.Hero)
+                {
+                    livingHeroes++;
+                }
+                else
+                {
+                    livingEnemies++;
+                }
+            }
+
+            if (livingEnemies == 0)
+            {
+                EndBattle(BattleResult.Victory);
+            }
+            else if (livingHeroes == 0)
+            {
+                EndBattle(BattleResult.Defeat);
+            }
+        }
+        private void EndBattle(BattleResult result)
+        {
+            if (battleResult != BattleResult.InProgress)
+            {
+                return;
+            }
+
+            battleResult = result;
+
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                runtimeUnit.Model.ClearTarget();
+
+                if (runtimeUnit.TargetLine != null)
+                {
+                    runtimeUnit.TargetLine.enabled = false;
+                }
+            }
+
+            Debug.Log(
+                result == BattleResult.Victory
+                    ? "VICTORY: All enemies were defeated."
+                    : "DEFEAT: All heroes were defeated.",
+                this);
+        }
+
+
+        private bool CanAttack( CombatUnit attacker, CombatUnit target)
+        {
+            if (attacker == null ||
+                target == null ||
+                attacker.IsDefeated ||
+                target.IsDefeated)
+            {
+                return false;
+            }
+
+            if (attacker.Team == target.Team)
+            {
+                return false;
+            }
+
+            return GetDistance(
+                attacker.Position,
+                target.Position) == 1;
+        }
+
+        private void UpdateTargets()
+        {
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                if (battleResult != BattleResult.InProgress)
+                {
+                    break;
+                }
+                var unit = runtimeUnit.Model;
+                if (unit.IsDefeated)
+                {
+                    unit.ClearTarget();
+
+                    if(runtimeUnit.TargetLine != null)
+                    {
+                        runtimeUnit.TargetLine.enabled = false;
+                    }
+                    continue;
+                }
+                var nearest = FindNearestOpponent(unit);
+
+                CombatUnit adjacentTarget = null;
+
+                if (nearest != null &&
+                    GetDistance(unit.Position, nearest.Position) == 1)
+                {
+                    adjacentTarget = nearest;
+                }
+
+                if (unit.CurrentTarget == adjacentTarget)
+                {
+                    continue;
+                }
+
+                if (adjacentTarget == null)
+                {
+                    if (unit.CurrentTarget != null)
+                    {
+                        Debug.Log(
+                            $"{unit.Name} clears target " +
+                            $"{unit.CurrentTarget.Name}",
+                            this);
+                    }
+
+                    unit.ClearTarget();
+                    continue;
+                }
+
+                unit.SetTarget(adjacentTarget);
+
+                Debug.Log(
+                    $"{unit.Name} targets {adjacentTarget.Name}",
+                    this);
+            }
+        }
+        private void UpdateTargetLines()
+        {
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                var line = runtimeUnit.TargetLine;
+                var visual = runtimeUnit.Visual;
+                var target = runtimeUnit.Model.CurrentTarget;
+
+                if (line == null || visual == null)
+                {
+                    continue;
+                }
+
+                if (runtimeUnit.Model.IsDefeated ||
+                    target == null ||
+                    target.IsDefeated)
+                {
+                    line.enabled = false;
+                    continue;
+                }
+
+                var targetRuntime = FindRuntimeUnit(target);
+
+                if (targetRuntime == null || targetRuntime.Visual == null)
+                {
+                    line.enabled = false;
+                    continue;
+                }
+
+                line.enabled = true;
+                line.SetPosition(0, visual.position + Vector3.up * 0.7f);
+                line.SetPosition(
+                    1,
+                    targetRuntime.Visual.position + Vector3.up * 0.7f);
+            }
+        }
+
+
+        private UnitRuntime FindRuntimeUnit(CombatUnit model)
+        {
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                if (battleResult != BattleResult.InProgress)
+                {
+                    break;
+                }
+                if (runtimeUnit.Model == model)
+                {
+                    return runtimeUnit;
+                }
+            }
+
+            return null;
+        }
+
+
+        private Dictionary<Transform, Vector3> MoveUnits()
+        {
+            var movements = new Dictionary<Transform, Vector3>();
+            foreach (var runtimeUnit in runtimeUnits)
+            {
+                if (battleResult != BattleResult.InProgress)
+                {
+                    break;
+                }
+                if (runtimeUnit.Model.IsDefeated)
+                {
+                    continue;
+                }
+                var target = FindNearestOpponent(runtimeUnit.Model);
+
+                if (target == null)
+                {
+                    continue;
+                }
+
+                var distance = GetDistance(
+                    runtimeUnit.Model.Position,
+                    target.Position);
+
+                if (distance <= 1)
+                {
+                    continue;
+                }
+
+                if (!TryChooseNextPosition(
+                        runtimeUnit.Model,
+                        target,
+                        out var destination))
+                {
+                    continue;
+                }
+
+                if (combatGrid.TryMoveUnit(
+                        runtimeUnit.Model,
+                        destination))
+                {
+                    movements[runtimeUnit.Visual] =
+                        GridToWorld(destination, 0.5f);
+                }
+            }
+
+            return movements;
+        }
+        private CombatUnit FindNearestOpponent(CombatUnit unit)
+        {
+            if (unit == null || unit.IsDefeated)
+            {
+                return null;
+            }
+            CombatUnit nearest = null;
+            var nearestDistance = int.MaxValue;
+
+            foreach (var candidate in runtimeUnits)
+            {
+                if (candidate.Model.Team == unit.Team || candidate.Model.IsDefeated)
+                {
+                    continue;
+                }
+
+                var distance = GetDistance(
+                    unit.Position,
+                    candidate.Model.Position);
+
+                var isCloser = distance < nearestDistance;
+
+                var winsTie = distance == nearestDistance && nearest != null && string.CompareOrdinal(candidate.Model.Name, nearest.Name) < 0;
+
+                if (nearest == null || isCloser || winsTie)
+                {
+                    nearest = candidate.Model;
+                    nearestDistance = distance;
+                }
+
+
+            }
+
+            return nearest;
+        }
+
+        private static int GetDistance(GridPosition first, GridPosition second)
+        {
+            return Mathf.Abs(first.X - second.X) +
+                   Mathf.Abs(first.Y - second.Y);
+        }
+
+        private bool TryChooseNextPosition(CombatUnit unit, CombatUnit target, out GridPosition destination)
+        {
+            var current = unit.Position;
+            var deltaX = target.Position.X - current.X;
+            var deltaY = target.Position.Y - current.Y;
+
+            var horizontalStep = new GridPosition(
+                current.X + GetDirection(deltaX),
+                current.Y);
+
+            var verticalStep = new GridPosition(
+                current.X,
+                current.Y + GetDirection(deltaY));
+
+            if (Mathf.Abs(deltaY) >= Mathf.Abs(deltaX))
+            {
+                if (CanEnter(verticalStep))
+                {
+                    destination = verticalStep;
+                    return true;
+                }
+
+                if (CanEnter(horizontalStep))
+                {
+                    destination = horizontalStep;
+                    return true;
+                }
+            }
+            else
+            {
+                if (CanEnter(horizontalStep))
+                {
+                    destination = horizontalStep;
+                    return true;
+                }
+
+                if (CanEnter(verticalStep))
+                {
+                    destination = verticalStep;
+                    return true;
+                }
+            }
+
+            destination = current;
+            return false;
+        }
+
+        private bool CanEnter(GridPosition position)
+        {
+            return combatGrid.IsInBounds(position) &&
+                   !combatGrid.GetCell(position).IsOccupied;
+        }
+
+        private static int GetDirection(int difference)
+        {
+            if (difference > 0)
+            {
+                return 1;
+            }
+
+            if (difference < 0)
+            {
+                return -1;
+            }
+
+            return 0;
+        }
+        private IEnumerator AnimateMovements(Dictionary<Transform, Vector3> movements)
+        {
+            var startingPositions =
+                new Dictionary<Transform, Vector3>();
+
+            foreach (var movement in movements)
+            {
+                startingPositions[movement.Key] =
+                    movement.Key.localPosition;
+            }
+
+            var elapsed = 0f;
+
+            while (elapsed < movementDuration)
+            {
+                elapsed += Time.deltaTime;
+
+                var progress = movementDuration <= 0f
+                    ? 1f
+                    : Mathf.Clamp01(elapsed / movementDuration);
+
+                foreach (var movement in movements)
+                {
+                    movement.Key.localPosition = Vector3.Lerp(
+                        startingPositions[movement.Key],
+                        movement.Value,
+                        progress);
+                }
+
+                yield return null;
+            }
+
+            foreach (var movement in movements)
+            {
+                movement.Key.localPosition = movement.Value;
+            }
         }
 
         private Material GetCellMaterial(int row)
@@ -187,5 +810,23 @@ namespace SoulBoundAscent.Grid
                 Destroy(root.GetChild(i).gameObject);
             }
         }
+
+        private sealed class UnitRuntime
+        {
+            public CombatUnit Model { get; }
+            public Transform Visual { get; }
+            public Renderer Renderer { get; }
+            public LineRenderer TargetLine { get; }
+
+            public UnitRuntime(CombatUnit model, Transform visual,Renderer renderer, LineRenderer targetLine)
+            {
+                Model = model;
+                Visual = visual;
+                Renderer = renderer;
+                TargetLine = targetLine;
+            }
+        }
     }
 }
+
+
